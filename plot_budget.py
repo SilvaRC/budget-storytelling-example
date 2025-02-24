@@ -12,11 +12,36 @@ def load_data(csv_file):
 
 def process_data(df):
     """Processes the DataFrame: computes log values and sorts by height."""
-    df["percentage"] = df["Empenhado"]/np.sum(np.log(df["Empenhado"]))
+    df["percentage"] = df["Empenhado"]/np.sum(df["Empenhado"])
     df["log_percentage"] = np.log(df["percentage"] * 100)
     df["empenhado_log"] = np.log(df["Empenhado"])
 
     df = df.sort_values(by="log_percentage", ascending=False)
+    return df
+    
+def process_data_grouping(df, THRESHOLD):
+    """Processes the DataFrame: computes log values and groups small categories."""
+    df["percentage"] = df["Empenhado"]/np.sum(df["Empenhado"])
+    total_empenhado = np.sum(df["Empenhado"])
+    df["log_percentage"] = np.log(df["percentage"] * 100)
+    df["empenhado_log"] = np.log(df["Empenhado"])
+    
+    # Group categories below the threshold
+    small_categories = df[df["percentage"] < THRESHOLD]
+    large_categories = df[df["percentage"] >= THRESHOLD]
+
+    if not small_categories.empty:
+        outras_despesas_value = small_categories["Empenhado"].sum()
+        outras_despesas_percent = outras_despesas_value/total_empenhado
+        outras_despesas_percent_log = np.log(outras_despesas_percent * 100)
+        outras_despesas_empenhado_log = np.log(outras_despesas_value)
+        
+        outras_despesas_row = pd.DataFrame({"Funcao": ["Outras despesas"], "Empenhado": [outras_despesas_value], "percentage": [outras_despesas_percent], "log_percentage": [outras_despesas_percent_log], "empenhado_log": [outras_despesas_empenhado_log]})
+        outras_despesas_percent = outras_despesas_value/total_empenhado
+                
+        df = pd.concat([large_categories, outras_despesas_row], ignore_index=True)
+
+    df = df.sort_values(by="log_percentage", ascending=False)  # Sort with largest on top
     return df
 
 #def get_bar_colors(values):
@@ -158,19 +183,53 @@ def plot_histogram_empenhado_horiz(df, output_folder):
     
     plt.show()
 
+def plot_histogram_empenhado_grouping(df, output_folder):
+    """Plots a histogram using Matplotlib with sorted values and formatted x-axis."""
+    plt.figure(figsize=(12, 6))
+    #bars = plt.bar(df["Funcao"], df["empenhado_log"], color="skyblue", edgecolor="black")
+    
+    # Get colors based on log values
+    #colors = get_bar_colors(df["empenhado_log"]) 
+    colors = get_bar_colors(df["Empenhado"], vmin=0.5*min(df["Empenhado"]), vmax=1.1*max(df["Empenhado"]))  # Adjust limits
+    
+    bars = plt.bar(df["Funcao"], df["Empenhado"], color=colors, edgecolor="black")
+
+    # Add value labels inside the bars
+    for bar, value in zip(bars, df["Empenhado"]):
+        plt.text(bar.get_x() + bar.get_width(), bar.get_height()+100000000000, 
+                 f"R$ {(value/1000000000):.2f} bi", ha='center', va='center', fontsize=8, color='black', rotation = 45)
+        
+    plt.xlabel("Função", fontsize=12)
+    plt.ylabel("Valor empenhado (R$ bi)", fontsize=12)
+    plt.title("Histograma dos Gastos por Função no Exercício 2015", fontsize=14)
+    
+    # Rotate x-axis labels for better readability
+    plt.xticks(rotation=90, ha="right", fontsize=10)
+    plt.yticks([])  # Removes y-axis ticks
+
+    plt.grid(axis="y", linestyle="--", alpha=0.7)
+    plt.tight_layout()
+    
+    # Save the figure to the output folder
+    plt.savefig(os.path.join(output_folder, "plot_histogram_empenhado_agrupado.png"))
+    
+    plt.show()
+
 
 def main():
     """Main function to load, process, and visualize the data."""
     csv_file = "ExecucaoOrcamento2015.csv"  # Change this to the actual CSV file path
     df = load_data(csv_file)
     df = process_data(df)
+    THRESHOLD = 0.01
+    df_grouped = process_data_grouping(df, THRESHOLD)
     output_folder = "images"
     
     #plot_histogram_percent_log(df)
     plot_histogram_empenhado_log(df, output_folder)
     plot_histogram_empenhado(df, output_folder)
     #plot_histogram_empenhado_horiz(df, output_folder)
-
+    plot_histogram_empenhado_grouping(df_grouped, output_folder)
 
 if __name__ == "__main__":
     main()

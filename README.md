@@ -11,6 +11,9 @@ Data from the 2015 public budget was taken from the public resource "Painel do O
 ## Version using bar chart with log scale in the y-axis
 ![Alt text](images/plot_histogram_empenhado_log.png)
 
+## Version using bar chart with grouping categories with less than X% relevance
+![Alt text](images/plot_histogram_empenhado_agrupado.png)
+
 ## Other versions
 ### Version using bar chart
 ![Alt text](images/plot_histogram_empenhado.png)
